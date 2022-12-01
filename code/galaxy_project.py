@@ -5,7 +5,7 @@ this file in the project's jupyter notebook.
 """
 
 import numpy as np
-import convolutional_model
+import convolution_model
 
 def split_data(images, labels, split_ratio):
     """Splits data into training, validation, and test sets.
@@ -71,14 +71,14 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
         images, labels, split_ratio)
 
     # Generate the CNN model.
-    cnn_model = convolutional_model.get_CNN_model()
+    cnn_model = convolution_model.get_CNN_model()
 
     # Train the CNN model.
     print("Starting model training.")
     history = cnn_model.model.fit(
         train_img, train_lab,
-        epochs = epochs,
-        batch_size = batch_size,
+        epochs = cnn_model.epochs,
+        batch_size = cnn_model.batch_size,
         validation_data = (valid_img, valid_lab),
     )
 
