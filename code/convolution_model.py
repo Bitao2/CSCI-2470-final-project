@@ -3,16 +3,11 @@ import numpy as np
 import tensorflow as tf
 
 
-def get_CNN_model(
-    conv_ns=tf.keras.layers,
-    norm_ns=tf.keras.layers,
-    drop_ns=tf.keras.layers,
-    man_conv_ns=tf.keras.layers,
-):
+def get_CNN_model():
 
-    Conv2D = conv_ns.Conv2D
-    BatchNormalization = norm_ns.BatchNormalization
-    Dropout = drop_ns.Dropout
+    Conv2D = tf.keras.layers.Conv2D
+    BatchNormalization = tf.keras.layers.BatchNormalization
+    Dropout = tf.keras.layers.Dropout
     
     input_prep_fn = tf.keras.Sequential(
         [
@@ -33,7 +28,7 @@ def get_CNN_model(
     model = CustomSequential(
         [
         # conv layer with 16 filters
-        Conv2D_manual(filters=16, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
+        Conv2D(filters=16, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
         # batch normalization
         BatchNormalization(),
         # conv layer with 100 filters
@@ -72,7 +67,6 @@ class CustomSequential(tf.keras.Sequential):
     """
     Subclasses tf.keras.Sequential to allow us to specify preparation functions that
     will modify input and output data.
-    DO NOT EDIT
     :param input_prep_fn: Modifies input images prior to running the forward pass
     :param output_prep_fn: Modifies input labels prior to running forward pass
     :param augment_fn: Augments input images prior to running forward pass

@@ -84,7 +84,7 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
 
     # Test the CNN model.
     print("Starting model testing.")
-    test_results = cnn_model.model.evaluate(test_img, test_lab, batch_size)
+    test_results = cnn_model.model.evaluate(test_img, test_lab, cnn_model.batch_size)
     print("Test loss, test accuracy: ", test_results)
 
     # Print summary of the CNN model.
