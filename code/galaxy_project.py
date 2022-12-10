@@ -8,8 +8,9 @@ import numpy as np
 import convolution_model
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.model_selection import StratifiedShuffleSplit
-from sklearn import metrics
+from sklearn.metrics import confusion_matrix
 
 def split_data(images, labels, split_ratio):
     """Splits data into training, validation, and test sets.
@@ -34,21 +35,7 @@ def split_data(images, labels, split_ratio):
     images = images[permuted_indices]
     labels = labels[permuted_indices]
 
-    """
-    # Split the data.  To deal with the fact that the given split_ratio values
-    # might not correspond to integer-valued number of examples, we round
-    # the training and validation sets to the nearest integer, and then just
-    # use the remaining examples as the test set.
-    num_ex = len(labels)
-    num_train = round(num_ex * (split_ratio[0] * 0.01))
-    num_valid = round(num_ex * (split_ratio[1] * 0.01))
-    train_img = shuffled_img[:num_train,:,:]
-    valid_img = shuffled_img[num_train:(num_train + num_valid),:,:]
-    test_img = shuffled_img[(num_train + num_valid):,:,:]
-    train_lab = shuffled_lab[:num_train]
-    valid_lab = shuffled_lab[num_train:(num_train + num_valid)]
-    test_lab = shuffled_lab[(num_train + num_valid):]
-    """
+    # Split the data in a way that maintains the proportions of each class in each split.
     our_test_valid_size = (split_ratio[1] + split_ratio[2]) * 0.01
     #print("valid test size = ", our_test_valid_size)
     split1 = StratifiedShuffleSplit(n_splits=1, test_size=our_test_valid_size, random_state=42)
@@ -143,11 +130,15 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
     # Print summary of the CNN model.
     cnn_model.model.summary()
 
-    # Print confusion matrix.
+    # Print textual confusion matrix.
     predictions = np.argmax(cnn_model.model.predict(valid_img), -1)
     confusion_mtx = tf.math.confusion_matrix(predictions, valid_lab)
     print(confusion_mtx)
 
-    # Print some example images along with their predicted classes.
-    show_example_predictions(valid_img, valid_lab, predictions)
-
+    # Show confusion matrix image.
+    matrix = confusion_matrix(valid_lab, predictions)
+    sns.heatmap(matrix, annot=True, fmt='.0f')
+    plt.title('Galaxy Confusion Matrix (Tensorflow model)')
+    plt.xlabel('Predicted class')
+    plt.ylabel('True class')
+    plt.show()
