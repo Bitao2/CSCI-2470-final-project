@@ -11,8 +11,9 @@ def get_CNN_model():
     
     input_prep_fn = tf.keras.Sequential(
         [
-            tf.keras.layers.Rescaling(scale=1 / 255),
-            tf.keras.layers.Resizing(32, 32),
+            #tf.keras.layers.Rescaling(scale=1 / 255),
+            tf.keras.layers.CenterCrop(224, 224),
+            tf.keras.layers.Resizing(69, 69),
         ]
     )
     output_prep_fn = tf.keras.layers.CategoryEncoding(
@@ -21,7 +22,14 @@ def get_CNN_model():
 
     augment_fn = tf.keras.Sequential(
         [            
-         tf.keras.layers.RandomTranslation(height_factor=0.2, width_factor=0.2)
+         #tf.keras.layers.RandomTranslation(height_factor=0.2, width_factor=0.2)
+
+         # Random rotation (45)
+         tf.keras.layers.RandomRotation(45.0),
+         # Color jitter (0, 0.2)
+         # Random horizontal and vertical flip
+         tf.keras.layers.RandomFlip("horizontal_and_vertical"),
+         # Normalize
         ]
     )
 
@@ -54,7 +62,7 @@ def get_CNN_model():
 
 
     model.compile(
-        optimizer="adam",
+        optimizer="adam", # maybe change learning rate to 0.0001
         loss="categorical_crossentropy", 
         metrics=["categorical_accuracy"],
     )
