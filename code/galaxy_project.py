@@ -27,6 +27,7 @@ def split_data(images, labels, split_ratio):
         testing labels, respectively.
     """
 
+    print("Started splitting the data.")
     # Shuffle the data.
     rng = np.random.default_rng()
     permuted_indices = rng.permutation(len(labels))
@@ -49,14 +50,14 @@ def split_data(images, labels, split_ratio):
     test_lab = shuffled_lab[(num_train + num_valid):]
     """
     our_test_valid_size = (split_ratio[1] + split_ratio[2]) * 0.01
-    print("valid test size = ", our_test_valid_size)
+    #print("valid test size = ", our_test_valid_size)
     split1 = StratifiedShuffleSplit(n_splits=1, test_size=our_test_valid_size, random_state=42)
     for train_index, test_valid_index in split1.split(images, labels):
         train_img, test_valid_img = images[train_index], images[test_valid_index]
         train_lab, test_valid_lab = labels[train_index], labels[test_valid_index]
 
     size_of_valid_as_frac_of_test_valid = (split_ratio[2] / (split_ratio[1] + split_ratio[2]))
-    print("valid size as frac of test_valid = ", size_of_valid_as_frac_of_test_valid)
+    #print("valid size as frac of test_valid = ", size_of_valid_as_frac_of_test_valid)
     split2 = StratifiedShuffleSplit(n_splits=1, test_size=size_of_valid_as_frac_of_test_valid, random_state=42)
     for test_index, valid_index in split2.split(test_valid_img, test_valid_lab):
         test_img, valid_img = test_valid_img[test_index], test_valid_img[valid_index]
@@ -67,16 +68,37 @@ def split_data(images, labels, split_ratio):
     test_class_ids, test_class_counts = np.unique(test_lab, return_counts=True)
     valid_class_ids, valid_class_counts = np.unique(valid_lab, return_counts=True)
 
+    """
     num_orig_examples = images.shape[0]
     for orig_class_id, orig_class_count in enumerate(orig_class_counts):
         print(f"Class {orig_class_id} originally has {orig_class_count/num_orig_examples} fraction of examples.")
     num_valid_examples = valid_img.shape[0]
     for valid_class_id, valid_class_count in enumerate(valid_class_counts):
         print(f"Class {valid_class_id} originally has {valid_class_count/num_valid_examples} fraction of examples.")
+    """
 
+    print("Finished splitting the data.")
     return train_img, train_lab, valid_img, valid_lab, test_img, test_lab
 
+def show_example_predictions(valid_img, valid_lab, predictions):
+    # Get indices of first image for each class.
+    first_img_indices = []
+    for i in range(0, 10):
+        this_class_starting_index = np.where(valid_lab == i)[0][0]
+        first_img_indices.append(this_class_starting_index)
 
+    # Plot the corresponding images.
+    fig, ax = plt.subplots(1, 10)
+    fig.set_size_inches(12, 1.2)
+    for i, each_image in enumerate(first_img_indices):
+        ax[i].imshow(valid_img[each_image].astype('uint8'))
+        ax[i].tick_params(left=False)
+        ax[i].tick_params(bottom=False)
+        ax[i].tick_params(labelleft=False)
+        ax[i].tick_params(labelbottom=False)
+        ax[i].set_xlabel(f"Class {i}\nPrediction: {predictions[each_image]}")
+    fig.suptitle("Example images from each class, along with their predictions.")
+    plt.show()
 
 def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
     """Generates and trains a CNN model.
@@ -122,67 +144,10 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
     cnn_model.model.summary()
 
     # Print confusion matrix.
-    #predictions = cnn_model.model.predict(valid_img)
-    #confusion_mat = cnn_model.model.get_confusion_matrix(test_lab, predictions)
-    #print(confusion_mat)
-    #fig_confusion1, ax_confusion1 = cnn_model.model.visualize_confusion_matrix(confusion_mat)
-    #P1 = np.argmax(cnn_model.model.predict(valid_img), -1)
-    #confusion_mtx = tf.math.confusion_matrix(P1, valid_lab)
-    #P0 = np.argmax(cnn_model.model.predict(train_img), -1)
-    #confusion_mtx = tf.math.confusion_matrix(P0, train_lab)
-
-    """
-    plt.figure(figsize=(12, 9))
-    plt.imshow(confusion_mtx, cmap='hot', interpolation='nearest')
-
-    fig, ax = plt.subplots(2, 10)
-    fig.set_size_inches(24, 8)
-
-    pred0 = cnn_model.predict(X0[:10])
-    pred1 = cnn_model.predict(X1[:10])
-
-    def p2l(pred):
-        return D_info.features['label']._int2str[pred]
-
-    for i in range(10):
-        ax[0][i].imshow(X0[i], cmap = "Greys")
-        ax[1][i].imshow(X1[i], cmap = "Greys")
-        ax[1][i].tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
-        ax[0][i].set_xlabel(f"Pred {p2l(np.argmax(pred0[i], -1))} | {p2l(Y0[i])}")    
-        ax[1][i].set_xlabel(f"Pred {p2l(np.argmax(pred1[i], -1))} | {p2l(Y1[i])}")
-
-    """
-
+    predictions = np.argmax(cnn_model.model.predict(valid_img), -1)
+    confusion_mtx = tf.math.confusion_matrix(predictions, valid_lab)
     print(confusion_mtx)
 
-
-    #confusion_matrix = metrics.confusion_matrix(valid_lab, predictions)
-    #cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix = confusion_matrix, display_labels = [False, True])
-    #cm_display.plot()
-    #plt.show()
-
-    """
-    fig, ax = plt.subplots(2, 10)
-    fig.set_size_inches(24, 8)
-
-    pred0 = cnn_model.predict(X0[:10])
-    pred1 = cnn_model.predict(X1[:10])
-
-    def p2l(pred):
-        return D_info.features['label']._int2str[pred]
-
-    for i in range(10):
-        ax[0][i].imshow(X0[i], cmap = "Greys")
-        ax[1][i].imshow(X1[i], cmap = "Greys")
-        ax[1][i].tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
-        ax[0][i].set_xlabel(f"Pred {p2l(np.argmax(pred0[i], -1))} | {p2l(Y0[i])}")    
-        ax[1][i].set_xlabel(f"Pred {p2l(np.argmax(pred1[i], -1))} | {p2l(Y1[i])}")
-    """
-    #plt.figure(figsize=(10, 8))
-    #sns.heatmap(cm, xticklabels=labels, yticklabels=labels, annot=True, fmt='g')
-    #plt.xlabel('Prediction')
-    #plt.ylabel('Label')
-    #plt.show()
-
-
+    # Print some example images along with their predicted classes.
+    show_example_predictions(valid_img, valid_lab, predictions)
 
