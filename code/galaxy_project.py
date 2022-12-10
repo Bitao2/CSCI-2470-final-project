@@ -30,8 +30,8 @@ def split_data(images, labels, split_ratio):
     # Shuffle the data.
     rng = np.random.default_rng()
     permuted_indices = rng.permutation(len(labels))
-    shuffled_img = images[permuted_indices]
-    shuffled_lab = labels[permuted_indices]
+    images = images[permuted_indices]
+    labels = labels[permuted_indices]
 
     """
     # Split the data.  To deal with the fact that the given split_ratio values
@@ -49,12 +49,14 @@ def split_data(images, labels, split_ratio):
     test_lab = shuffled_lab[(num_train + num_valid):]
     """
     our_test_valid_size = (split_ratio[1] + split_ratio[2]) * 0.01
+    print("valid test size = ", our_test_valid_size)
     split1 = StratifiedShuffleSplit(n_splits=1, test_size=our_test_valid_size, random_state=42)
     for train_index, test_valid_index in split1.split(images, labels):
         train_img, test_valid_img = images[train_index], images[test_valid_index]
         train_lab, test_valid_lab = labels[train_index], labels[test_valid_index]
 
-    size_of_valid_as_frac_of_test_valid = (split_ratio[2] / (split_ratio[1] + split_ratio[2])) * 0.01
+    size_of_valid_as_frac_of_test_valid = (split_ratio[2] / (split_ratio[1] + split_ratio[2]))
+    print("valid size as frac of test_valid = ", size_of_valid_as_frac_of_test_valid)
     split2 = StratifiedShuffleSplit(n_splits=1, test_size=size_of_valid_as_frac_of_test_valid, random_state=42)
     for test_index, valid_index in split2.split(test_valid_img, test_valid_lab):
         test_img, valid_img = test_valid_img[test_index], test_valid_img[valid_index]
