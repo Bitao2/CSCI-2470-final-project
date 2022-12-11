@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.metrics import confusion_matrix
+import visualkeras
 
 def split_data(images, labels, split_ratio):
     """Splits data into training, validation, and test sets.
@@ -87,7 +88,7 @@ def show_example_predictions(valid_img, valid_lab, predictions):
     fig.suptitle("Example images from each class, along with their predictions.")
     plt.show()
 
-def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
+def run_cnn_model(images, labels, multi=True, split_ratio=[70, 15, 15]):
     """Generates and trains a CNN model.
 
     Args:
@@ -110,8 +111,14 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
     train_img, train_lab, valid_img, valid_lab, test_img, test_lab = split_data(
         images, labels, split_ratio)
 
-    # Generate the CNN model.
-    cnn_model = convolution_model.get_CNN_model()
+    # Generate the multi-layer CNN model.
+    if multi==True:
+        cnn_model = convolution_model.get_multi_CNN_model()
+    
+    # Generate the single-layer CNN model
+    else:
+        cnn_model = convolution_model.get_single_CNN_model()
+    
 
     # Train the CNN model.
     print("Starting model training.")
@@ -142,3 +149,5 @@ def run_cnn_model(images, labels, split_ratio=[70, 15, 15]):
     plt.xlabel('Predicted class')
     plt.ylabel('True class')
     plt.show()
+
+    visualkeras.layered_view(cnn_model.model).show()

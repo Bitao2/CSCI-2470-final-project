@@ -2,17 +2,16 @@ from types import SimpleNamespace
 import numpy as np
 import tensorflow as tf
 
-
-def get_CNN_model():
-
+def get_single_CNN_model():
     Conv2D = tf.keras.layers.Conv2D
     BatchNormalization = tf.keras.layers.BatchNormalization
     Dropout = tf.keras.layers.Dropout
     
     input_prep_fn = tf.keras.Sequential(
         [
-            #tf.keras.layers.Rescaling(scale=1 / 255),
+            # add center crop
             tf.keras.layers.CenterCrop(224, 224),
+            # add resizing
             tf.keras.layers.Resizing(69, 69),
         ]
     )
@@ -22,9 +21,7 @@ def get_CNN_model():
 
     augment_fn = tf.keras.Sequential(
         [            
-         #tf.keras.layers.RandomTranslation(height_factor=0.2, width_factor=0.2)
-
-         # Random rotation (45)
+         # Random rotation(45)
          tf.keras.layers.RandomRotation(45.0),
          # Color jitter (0, 0.2)
          # Random horizontal and vertical flip
@@ -37,10 +34,6 @@ def get_CNN_model():
         [
         # conv layer with 16 filters
         Conv2D(filters=16, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
-        # batch normalization
-        BatchNormalization(),
-        # conv layer with 100 filters
-        Conv2D(filters=100, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
         # batch normalization
         BatchNormalization(),
         # max pooling layer
@@ -62,23 +55,94 @@ def get_CNN_model():
 
 
     model.compile(
+        # using Adam as the optimizer
         optimizer="adam", # maybe change learning rate to 0.0001
+        # loss is categorical cross-entropy
         loss="categorical_crossentropy", 
+        # using accuracy as the metric
         metrics=["categorical_accuracy"],
     )
 
     return SimpleNamespace(model=model, epochs=50, batch_size=100)
 
 
+def get_multi_CNN_model():
 
+    Conv2D = tf.keras.layers.Conv2D
+    BatchNormalization = tf.keras.layers.BatchNormalization
+    Dropout = tf.keras.layers.Dropout
+    
+    input_prep_fn = tf.keras.Sequential(
+        [
+            # add center crop
+            tf.keras.layers.CenterCrop(224, 224),
+            # add resizing
+            tf.keras.layers.Resizing(69, 69),
+        ]
+    )
+    output_prep_fn = tf.keras.layers.CategoryEncoding(
+        # one hot encode labels
+        num_tokens=10, output_mode="one_hot"
+    )
+
+    augment_fn = tf.keras.Sequential(
+        [            
+         # Random rotation(45)
+         tf.keras.layers.RandomRotation(45.0),
+         # Color jitter (0, 0.2)
+         # Random horizontal and vertical flip
+         tf.keras.layers.RandomFlip("horizontal_and_vertical"),
+         # Normalize
+        ]
+    )
+
+    model = CustomSequential(
+        [
+        # conv layer with 16 filters
+        Conv2D(filters=16, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
+        # batch normalization
+        BatchNormalization(),
+        # conv layer with 64 filters
+        Conv2D(filters=64, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
+        # batch normalization
+        BatchNormalization(),
+        # conv layer with 128 filters
+        Conv2D(filters=128, kernel_size=(3,3), strides=(2, 2), padding = 'SAME', activation='leaky_relu'),
+        # batch normalization
+        BatchNormalization(),
+        # max pooling layer
+        tf.keras.layers.MaxPool2D(pool_size=(2,2)),
+        # dropout layer
+        Dropout(rate = 0.1),
+        # flatten layer
+        tf.keras.layers.Flatten(),
+        # dropout layer
+        Dropout(rate = 0.1),
+        # dense layer
+        tf.keras.layers.Dense(100, activation='leaky_relu'),
+        # dropout layer
+        Dropout(rate=0.1),
+        # final dense layer using softmax
+        tf.keras.layers.Dense(10, activation='softmax')
+        ], input_prep_fn=input_prep_fn, output_prep_fn=output_prep_fn, augment_fn=augment_fn
+    )
+
+
+    model.compile(
+        # using Adam as the optimizer
+        optimizer="adam", # maybe change learning rate to 0.0001
+        # loss is categorical cross-entropy
+        loss="categorical_crossentropy", 
+        # using accuracy as the metric
+        metrics=["categorical_accuracy"],
+    )
+
+    return SimpleNamespace(model=model, epochs=1, batch_size=100)
+
+
+# using a custom class CustomSequential in order to modify input and output data, while adding in data augmentation
 class CustomSequential(tf.keras.Sequential):
-    """
-    Subclasses tf.keras.Sequential to allow us to specify preparation functions that
-    will modify input and output data.
-    :param input_prep_fn: Modifies input images prior to running the forward pass
-    :param output_prep_fn: Modifies input labels prior to running forward pass
-    :param augment_fn: Augments input images prior to running forward pass
-    """
+# subclass of the tf.keras.Sequential model
 
     def __init__(
         self,
@@ -89,39 +153,51 @@ class CustomSequential(tf.keras.Sequential):
         **kwargs
     ):
         super().__init__(*args, **kwargs)
+        # takes in input_prep_fn, output_prep_fn, augment_fn
         self.input_prep_fn = input_prep_fn
         self.output_prep_fn = output_prep_fn
         self.augment_fn = augment_fn
 
+    # define the batch step
     def batch_step(self, data, training=False):
-
+        # take in the data
         x_raw, y_raw = data
-
+        # preprocess the input
         x = self.input_prep_fn(x_raw)
+        # one_hot encode the output
         y = self.output_prep_fn(y_raw)
+
+        # add in augmentation only for training
         if training:
             x = self.augment_fn(x)
 
+        # inside gradient tape
         with tf.GradientTape() as tape:
+            # calculate y_pred
             y_pred = self(x, training=training)
-            # Compute the loss value (the loss function is configured in `compile()`)
+            # calculate the compiled loss (in this case, categorical cross-entropy)
             loss = self.compiled_loss(y, y_pred, regularization_losses=self.losses)
 
         if training:
-            # Compute gradients
+            # Compute the gradients
             gradients = tape.gradient(loss, self.trainable_variables)
+            # apply gradients to the optimizer
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        # Update and return metrics (includes the metric that tracks the loss)
+        # update the state of the metrics
         self.compiled_metrics.update_state(y, y_pred)
+        # return the metrics and their values at each epoch
         return {m.name: m.result() for m in self.metrics}
 
+    # train step function
     def train_step(self, data):
         return self.batch_step(data, training=True)
 
+    # test step function
     def test_step(self, data):
         return self.batch_step(data, training=False)
 
+    # predict step function
     def predict_step(self, inputs):
         x = self.input_prep_fn(inputs)
         return self(x)
