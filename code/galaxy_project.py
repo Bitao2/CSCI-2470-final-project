@@ -44,12 +44,12 @@ def split_data(images, labels, split_ratio):
         train_img, test_valid_img = images[train_index], images[test_valid_index]
         train_lab, test_valid_lab = labels[train_index], labels[test_valid_index]
 
-    size_of_valid_as_frac_of_test_valid = (split_ratio[2] / (split_ratio[1] + split_ratio[2]))
+    size_of_test_as_frac_of_test_valid = (split_ratio[2] / (split_ratio[1] + split_ratio[2]))
     #print("valid size as frac of test_valid = ", size_of_valid_as_frac_of_test_valid)
-    split2 = StratifiedShuffleSplit(n_splits=1, test_size=size_of_valid_as_frac_of_test_valid, random_state=42)
-    for test_index, valid_index in split2.split(test_valid_img, test_valid_lab):
-        test_img, valid_img = test_valid_img[test_index], test_valid_img[valid_index]
-        test_lab, valid_lab = test_valid_lab[test_index], test_valid_lab[valid_index]
+    split2 = StratifiedShuffleSplit(n_splits=1, test_size=size_of_test_as_frac_of_test_valid, random_state=42)
+    for valid_index, test_index in split2.split(test_valid_img, test_valid_lab):
+        valid_img, test_img = test_valid_img[valid_index], test_valid_img[test_index]
+        valid_lab, test_lab = test_valid_lab[valid_index], test_valid_lab[test_index]
 
     orig_class_ids, orig_class_counts = np.unique(labels, return_counts=True)
     train_class_ids, train_class_counts = np.unique(train_lab, return_counts=True)
@@ -68,18 +68,18 @@ def split_data(images, labels, split_ratio):
     print("Finished splitting the data.")
     return train_img, train_lab, valid_img, valid_lab, test_img, test_lab
 
-def show_example_predictions(valid_img, valid_lab, predictions):
+def show_example_predictions(test_img, test_lab, predictions):
     # Get indices of first image for each class.
     first_img_indices = []
     for i in range(0, 10):
-        this_class_starting_index = np.where(valid_lab == i)[0][0]
+        this_class_starting_index = np.where(test_lab == i)[0][0]
         first_img_indices.append(this_class_starting_index)
 
     # Plot the corresponding images.
     fig, ax = plt.subplots(1, 10)
     fig.set_size_inches(12, 1.2)
     for i, each_image in enumerate(first_img_indices):
-        ax[i].imshow(valid_img[each_image].astype('uint8'))
+        ax[i].imshow(test_img[each_image].astype('uint8'))
         ax[i].tick_params(left=False)
         ax[i].tick_params(bottom=False)
         ax[i].tick_params(labelleft=False)
@@ -138,16 +138,19 @@ def run_cnn_model(images, labels, multi=True, split_ratio=[70, 15, 15]):
     cnn_model.model.summary()
 
     # Print textual confusion matrix.
-    predictions = np.argmax(cnn_model.model.predict(valid_img), -1)
-    confusion_mtx = tf.math.confusion_matrix(predictions, valid_lab)
+    predictions = np.argmax(cnn_model.model.predict(test_img), -1)
+    confusion_mtx = tf.math.confusion_matrix(predictions, test_lab)
     print(confusion_mtx)
 
     # Show confusion matrix image.
-    matrix = confusion_matrix(valid_lab, predictions)
+    matrix = confusion_matrix(test_lab, predictions)
     sns.heatmap(matrix, annot=True, fmt='.0f')
     plt.title('Galaxy Confusion Matrix (Tensorflow model)')
     plt.xlabel('Predicted class')
     plt.ylabel('True class')
     plt.show()
+
+    # Print some example predictions.
+    show_example_predictions(test_img, test_lab, predictions)
 
     visualkeras.layered_view(cnn_model.model).show()
